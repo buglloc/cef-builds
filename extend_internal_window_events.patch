@@ -1,0 +1,237 @@
+diff --git a/include/cef_life_span_handler.h b/include/cef_life_span_handler.h
+index 1453496..bacc27b 100644
+--- a/include/cef_life_span_handler.h
++++ b/include/cef_life_span_handler.h
+@@ -77,6 +77,13 @@ class CefLifeSpanHandler : public virtual CefBase {
+   }
+ 
+   ///
++  // Called after new internal window created and not mapped for now.
++  ///
++  /*--cef()--*/
++  virtual void OnWindowCreated(CefRefPtr<CefBrowser> browser, const CefWindowInfo& windowInfo) {}
++
++
++  ///
+   // Called after a new browser is created.
+   ///
+   /*--cef()--*/
+@@ -91,6 +98,12 @@ class CefLifeSpanHandler : public virtual CefBase {
+   virtual bool RunModal(CefRefPtr<CefBrowser> browser) { return false; }
+ 
+   ///
++  // Called before proccessing CloseBrowser
++  ///
++  /*--cef()--*/
++  virtual bool OnCloseBrowser(CefRefPtr<CefBrowser> browser) { return false; }
++
++  ///
+   // Called when a browser has recieved a request to close. This may result
+   // directly from a call to CefBrowserHost::CloseBrowser() or indirectly if the
+   // browser is a top-level OS window created by CEF and the user attempts to
+@@ -129,21 +142,22 @@ class CefLifeSpanHandler : public virtual CefBase {
+   // 2.  Application's top-level window receives the close notification and:
+   //     A. Calls CefBrowserHost::CloseBrowser(false).
+   //     B. Cancels the window close.
+-  // 3.  JavaScript 'onbeforeunload' handler executes and shows the close
++  // 3.  Application's OnBrowserClose() handler is called
++  // 4.  JavaScript 'onbeforeunload' handler executes and shows the close
+   //     confirmation dialog (which can be overridden via
+   //     CefJSDialogHandler::OnBeforeUnloadDialog()).
+-  // 4.  User approves the close.
+-  // 5.  JavaScript 'onunload' handler executes.
+-  // 6.  Application's DoClose() handler is called. Application will:
++  // 5.  User approves the close.
++  // 6.  JavaScript 'onunload' handler executes.
++  // 7.  Application's DoClose() handler is called. Application will:
+   //     A. Set a flag to indicate that the next close attempt will be allowed.
+   //     B. Return false.
+-  // 7.  CEF sends an OS close notification.
+-  // 8.  Application's top-level window receives the OS close notification and
++  // 8.  CEF sends an OS close notification.
++  // 9.  Application's top-level window receives the OS close notification and
+   //     allows the window to close based on the flag from #6B.
+-  // 9.  Browser OS window is destroyed.
+-  // 10. Application's CefLifeSpanHandler::OnBeforeClose() handler is called and
++  // 10.  Browser OS window is destroyed.
++  // 11. Application's CefLifeSpanHandler::OnBeforeClose() handler is called and
+   //     the browser object is destroyed.
+-  // 11. Application exits by calling CefQuitMessageLoop() if no other browsers
++  // 12. Application exits by calling CefQuitMessageLoop() if no other browsers
+   //     exist.
+   ///
+   /*--cef()--*/
+diff --git a/include/internal/cef_linux.h b/include/internal/cef_linux.h
+index 6238397..1ffa94f 100644
+--- a/include/internal/cef_linux.h
++++ b/include/internal/cef_linux.h
+@@ -84,6 +84,7 @@ struct CefWindowInfoTraits {
+     target->windowless_rendering_enabled = src->windowless_rendering_enabled;
+     target->transparent_painting_enabled = src->transparent_painting_enabled;
+     target->window = src->window;
++    target->popup_features = src->popup_features;
+   }
+ };
+ 
+diff --git a/include/internal/cef_types.h b/include/internal/cef_types.h
+index 20cf164..e4cb6f4 100644
+--- a/include/internal/cef_types.h
++++ b/include/internal/cef_types.h
+@@ -1642,6 +1642,7 @@ typedef enum {
+   XML_NODE_COMMENT,
+ } cef_xml_node_type_t;
+ 
++#ifndef OS_LINUX
+ ///
+ // Popup window features.
+ ///
+@@ -1666,6 +1667,7 @@ typedef struct _cef_popup_features_t {
+   int dialog;
+   cef_string_list_t additionalFeatures;
+ } cef_popup_features_t;
++#endif
+ 
+ ///
+ // DOM document types.
+diff --git a/include/internal/cef_types_linux.h b/include/internal/cef_types_linux.h
+index 3fb896d..1308d90 100644
+--- a/include/internal/cef_types_linux.h
++++ b/include/internal/cef_types_linux.h
+@@ -71,6 +71,31 @@ typedef struct _cef_main_args_t {
+ } cef_main_args_t;
+ 
+ ///
++// Popup window features.
++///
++typedef struct _cef_popup_features_t {
++  int x;
++  int xSet;
++  int y;
++  int ySet;
++  int width;
++  int widthSet;
++  int height;
++  int heightSet;
++
++  int menuBarVisible;
++  int statusBarVisible;
++  int toolBarVisible;
++  int locationBarVisible;
++  int scrollbarsVisible;
++  int resizable;
++
++  int fullscreen;
++  int dialog;
++  cef_string_list_t additionalFeatures;
++} cef_popup_features_t;
++
++///
+ // Class representing window information.
+ ///
+ typedef struct _cef_window_info_t {
+@@ -85,6 +110,11 @@ typedef struct _cef_window_info_t {
+   cef_window_handle_t parent_window;
+ 
+   ///
++  // Pointer for the popup features.
++  ///
++  cef_popup_features_t popup_features;
++
++  ///
+   // Set to true (1) to create the browser using windowless (off-screen)
+   // rendering. No window will be created for the browser and all rendering will
+   // occur via the CefRenderHandler interface. The |parent_window| value will be
+diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
+index 1f890f6..3d6ca0a 100644
+--- a/libcef/browser/browser_host_impl.cc
++++ b/libcef/browser/browser_host_impl.cc
+@@ -619,7 +619,12 @@ void CefBrowserHostImpl::CloseBrowser(bool force_close) {
+     }
+ 
+     content::WebContents* contents = web_contents();
+-    if (contents && contents->NeedToFireBeforeUnload()) {
++    if (!force_close  && OnCloseBrowser(contents)) {
++      // CloseBrowser handled in other way...
++      if (destruction_state_ != DESTRUCTION_STATE_NONE) {
++        destruction_state_ = DESTRUCTION_STATE_NONE;
++      }
++    } else if (contents && contents->NeedToFireBeforeUnload()) {
+       // Will result in a call to BeforeUnloadFired() and, if the close isn't
+       // canceled, CloseContents().
+       contents->DispatchBeforeUnload(false);
+@@ -2038,6 +2043,24 @@ void CefBrowserHostImpl::LoadingStateChanged(content::WebContents* source,
+   }
+ }
+ 
++bool CefBrowserHostImpl::OnCloseBrowser(content::WebContents* source) {
++  bool handled = false;
++  if (destruction_state_ == DESTRUCTION_STATE_COMPLETED)
++    return handled;
++
++  // If this method is called in response to something other than
++  // WindowDestroyed() ask the user if the browser should close.
++  if (client_.get() && (IsWindowless() || !window_destroyed_)) {
++    CefRefPtr<CefLifeSpanHandler> handler =
++        client_->GetLifeSpanHandler();
++    if (handler.get()) {
++      handled = handler->OnCloseBrowser(this);
++    }
++  }
++
++  return handled;
++}
++
+ void CefBrowserHostImpl::CloseContents(content::WebContents* source) {
+   if (destruction_state_ == DESTRUCTION_STATE_COMPLETED)
+     return;
+diff --git a/libcef/browser/browser_host_impl.h b/libcef/browser/browser_host_impl.h
+index 630fda3..774be40 100644
+--- a/libcef/browser/browser_host_impl.h
++++ b/libcef/browser/browser_host_impl.h
+@@ -577,6 +577,8 @@ class CefBrowserHostImpl : public CefBrowserHost,
+                  const GURL& url,
+                  int http_status_code);
+ 
++  bool OnCloseBrowser(content::WebContents* source);
++
+   // Continuation from RunFileChooser.
+   void RunFileChooserOnUIThread(const FileChooserParams& params,
+                                 const RunFileChooserCallback& callback);
+diff --git a/libcef/browser/browser_host_impl_linux.cc b/libcef/browser/browser_host_impl_linux.cc
+index 39670cf..a5a3ef8 100644
+--- a/libcef/browser/browser_host_impl_linux.cc
++++ b/libcef/browser/browser_host_impl_linux.cc
+@@ -180,6 +180,12 @@ bool CefBrowserHostImpl::PlatformCreateWindow() {
+         CefColorGetB(settings.background_color));
+   }
+ 
++  if (client_.get()) {
++    CefRefPtr<CefLifeSpanHandler> handler = client_->GetLifeSpanHandler();
++    if (handler.get())
++      handler->OnWindowCreated(this, window_info_);
++  }
++
+   CefWindowDelegateView* delegate_view =
+       new CefWindowDelegateView(background_color);
+   delegate_view->Init(window_info_.window,
+diff --git a/libcef/browser/content_browser_client.cc b/libcef/browser/content_browser_client.cc
+index 80f6464..59000ab 100644
+--- a/libcef/browser/content_browser_client.cc
++++ b/libcef/browser/content_browser_client.cc
+@@ -929,6 +929,7 @@ bool CefContentBrowserClient::CanCreateWindow(
+ 
+       CefPopupFeatures cef_features;
+       TranslatePopupFeatures(features, cef_features);
++      pending_info->window_info.popup_features = cef_features;
+ 
+ #if (defined(OS_WIN) || defined(OS_MACOSX))
+       // Default to the size from the popup features.
+@@ -946,7 +947,7 @@ bool CefContentBrowserClient::CanCreateWindow(
+           frame,
+           last_create_window_params_.target_url.spec(),
+           last_create_window_params_.target_frame_name,
+-          cef_features,
++          pending_info->window_info.popup_features,
+           pending_info->window_info,
+           pending_info->client,
+           pending_info->settings,

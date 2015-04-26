@@ -1,2 +1,7 @@
-# cef-builds
-Cef builds for Brick purposes
+Cef Builds
+==========
+
+Кастомные сборки CEF для нужд Brick.
+Больше информации чуть позже.
+
+После применения патчей не забыть вызвать tools/translator.sh для перегенерации libcef_dll
