@@ -1,0 +1,84 @@
+diff --git a/include/cef_response.h b/include/cef_response.h
+index 32fbef1..48eb448 100644
+--- a/include/cef_response.h
++++ b/include/cef_response.h
+@@ -115,6 +115,18 @@ class CefResponse : public virtual CefBase {
+   ///
+   /*--cef()--*/
+   virtual void SetHeaderMap(const HeaderMap& headerMap) =0;
++
++  ///
++  // Get the fully qualified URL (resolved after redirects, etc).
++  ///
++  /*--cef()--*/
++  virtual CefString GetURL() =0;
++
++  ///
++  // Set the fully qualified URL.
++  ///
++  /*--cef()--*/
++  virtual void SetURL(const CefString& url) =0;
+ };
+ 
+ #endif  // CEF_INCLUDE_CEF_RESPONSE_H_
+diff --git a/libcef/browser/browser_urlrequest_impl.cc b/libcef/browser/browser_urlrequest_impl.cc
+index 1005646..eb46e85 100644
+--- a/libcef/browser/browser_urlrequest_impl.cc
++++ b/libcef/browser/browser_urlrequest_impl.cc
+@@ -412,9 +412,12 @@ class CefBrowserURLRequest::Context
+       CefResponseImpl* responseImpl =
+           static_cast<CefResponseImpl*>(response_.get());
+ 
++      responseImpl->SetURL(fetcher_->GetURL().spec());
+       net::HttpResponseHeaders* headers = fetcher_->GetResponseHeaders();
+       if (headers)
+         responseImpl->SetResponseHeaders(*headers);
++      else if(fetcher_->GetResponseCode())
++        responseImpl->SetStatus(fetcher_->GetResponseCode());
+ 
+       responseImpl->SetReadOnly(true);
+     }
+diff --git a/libcef/common/response_impl.cc b/libcef/common/response_impl.cc
+index 6cd79ec..e0b8844 100644
+--- a/libcef/common/response_impl.cc
++++ b/libcef/common/response_impl.cc
+@@ -65,6 +65,17 @@ void CefResponseImpl::SetStatusText(const CefString& statusText) {
+   status_text_ = statusText;
+ }
+ 
++CefString CefResponseImpl::GetURL() {
++  base::AutoLock lock_scope(lock_);
++  return url_;
++}
++
++void CefResponseImpl::SetURL(const CefString& url) {
++  base::AutoLock lock_scope(lock_);
++  CHECK_READONLY_RETURN_VOID();
++  url_ = url;
++}
++
+ CefString CefResponseImpl::GetMimeType() {
+   base::AutoLock lock_scope(lock_);
+   return mime_type_;
+diff --git a/libcef/common/response_impl.h b/libcef/common/response_impl.h
+index df78a0c..461b8ad 100644
+--- a/libcef/common/response_impl.h
++++ b/libcef/common/response_impl.h
+@@ -34,6 +34,9 @@ class CefResponseImpl : public CefResponse {
+   CefString GetHeader(const CefString& name) override;
+   void GetHeaderMap(HeaderMap& headerMap) override;
+   void SetHeaderMap(const HeaderMap& headerMap) override;
++  CefString GetURL() override;
++  void SetURL(const CefString& url) override;
++
+ 
+   net::HttpResponseHeaders* GetResponseHeaders();
+   void SetResponseHeaders(const net::HttpResponseHeaders& headers);
+@@ -44,6 +47,7 @@ class CefResponseImpl : public CefResponse {
+ 
+  protected:
+   int status_code_;
++  CefString url_;
+   CefString status_text_;
+   CefString mime_type_;
+   HeaderMap header_map_;
