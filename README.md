@@ -13,7 +13,7 @@ Cef Builds
 
 ### stop_on_redirect.patch
 
-Добавляет новый флаг `UR_FLAG_STOP_ON_REDIRECT` для [CefURLRequest](http://magpcss.org/ceforum/apidocs/projects/%28default%29/CefURLRequest.html). ОН прокидывает хромовскому UrlFetcher'у и тот в свою очередь отменит запрос при редиректе, а не последует за ним.
+Добавляет новый флаг `UR_FLAG_STOP_ON_REDIRECT` для [CefURLRequest](http://magpcss.org/ceforum/apidocs/projects/%28default%29/CefURLRequest.html). Он прокидывается хромовскому UrlFetcher'у и тот в свою очередь отменит запрос при редиректе, а не последует за ним.
 
 
 ### extend_internal_window_events.patch
@@ -24,9 +24,12 @@ Cef Builds
 
 Разумеется, правильнее всего было бы пойти и исправить работу самого окна, а не костылять вокруг. Но сейчас это не важно, до тех пор пока Brick не захочет заиметь реалтаймовую многоаккаунтность.
 Этот патч решает обе проблемы, добавляя два новых события:
+
 `bool OnCloseBrowser(CefRefPtr<CefBrowser> browser)`
+
 Фаерится при DeleteEvent, при этом вызывается как можно выше (до "deal with onbeforeunload"), для того что бы со стороны JS не было никаких следов.
 
 `void OnWindowCreated(CefRefPtr<CefBrowser> browser)`
+
 Фаерится _после_ создания окна, но _до_ его маппинга в иксы.
 
