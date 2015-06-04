@@ -30,3 +30,8 @@ Cef Builds
 `void OnWindowCreated(CefRefPtr<CefBrowser> browser)`
 Фаерится _после_ создания окна, но _до_ его маппинга в иксы.
 
+### allow_screen_sharing.patch
+
+Патч разрешающий screen sharing. Увы, похоже webrtc пока не поддерживает выбор экрана для GNU/Linux, как сделано для Mac и Windows, поэтому "шарится" всегда все экраны:(
+
+
