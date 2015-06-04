@@ -1,0 +1,46 @@
+diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
+index 1f890f6..385f239 100644
+--- a/libcef/browser/browser_host_impl.cc
++++ b/libcef/browser/browser_host_impl.cc
+@@ -56,6 +56,7 @@
+ #include "content/public/browser/render_process_host.h"
+ #include "content/public/browser/render_view_host.h"
+ #include "content/public/browser/resource_request_info.h"
++#include "content/public/browser/desktop_media_id.h"
+ #include "content/public/common/file_chooser_params.h"
+ #include "third_party/WebKit/public/web/WebFindOptions.h"
+ #include "ui/shell_dialogs/selected_file_info.h"
+@@ -2340,7 +2341,10 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
+       (request.audio_type == content::MEDIA_DEVICE_AUDIO_CAPTURE);
+   bool webcam_requested =
+       (request.video_type == content::MEDIA_DEVICE_VIDEO_CAPTURE);
+-  if (microphone_requested || webcam_requested) {
++   bool screen_requested =
++     (request.video_type == content::MEDIA_DESKTOP_VIDEO_CAPTURE);
++
++  if (microphone_requested || webcam_requested || screen_requested) {
+     switch (request.request_type) {
+       case content::MEDIA_OPEN_DEVICE:
+       case content::MEDIA_DEVICE_ACCESS:
+@@ -2359,6 +2363,21 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
+             false,
+             webcam_requested,
+             &devices);
++
++        if (screen_requested) {
++          // ToDo: move to CefMediaCaptureDevicesDispatcher?
++          content::DesktopMediaID media_id;
++          if (request.requested_video_device_id.empty()) {
++            media_id = content::DesktopMediaID(
++              content::DesktopMediaID::TYPE_SCREEN,
++              -1);  // webrtc::kFullDesktopScreenId = -1
++          } else {
++            media_id = content::DesktopMediaID::Parse(request.requested_video_device_id);
++          }
++
++          devices.push_back(content::MediaStreamDevice(
++            content::MEDIA_DESKTOP_VIDEO_CAPTURE, media_id.ToString(), "Screen"));
++        }
+         break;
+     }
+   }
