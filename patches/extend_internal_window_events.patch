@@ -1,35 +1,32 @@
 diff --git a/include/cef_life_span_handler.h b/include/cef_life_span_handler.h
-index 1453496..86acba6 100644
+index 70bd70f..08b1d52 100644
 --- a/include/cef_life_span_handler.h
 +++ b/include/cef_life_span_handler.h
-@@ -77,6 +77,13 @@ class CefLifeSpanHandler : public virtual CefBase {
-   }
+@@ -53,6 +53,11 @@ class CefLifeSpanHandler : public virtual CefBase {
+  public:
+   typedef cef_window_open_disposition_t WindowOpenDisposition;
  
-   ///
 +  // Called after new internal window created and not mapped for now.
 +  ///
 +  /*--cef()--*/
 +  virtual void OnWindowCreated(CefRefPtr<CefBrowser> browser) {}
 +
-+
-+  ///
-   // Called after a new browser is created.
    ///
+   // Called on the IO thread before a new popup browser is created. The
+   // |browser| and |frame| values represent the source of the popup request. The
+@@ -99,6 +104,11 @@ class CefLifeSpanHandler : public virtual CefBase {
    /*--cef()--*/
-@@ -91,6 +98,12 @@ class CefLifeSpanHandler : public virtual CefBase {
    virtual bool RunModal(CefRefPtr<CefBrowser> browser) { return false; }
  
-   ///
 +  // Called before proccessing CloseBrowser
 +  ///
 +  /*--cef()--*/
 +  virtual bool OnCloseBrowser(CefRefPtr<CefBrowser> browser) { return false; }
 +
-+  ///
+   ///
    // Called when a browser has recieved a request to close. This may result
    // directly from a call to CefBrowserHost::CloseBrowser() or indirectly if the
-   // browser is a top-level OS window created by CEF and the user attempts to
-@@ -129,21 +142,22 @@ class CefLifeSpanHandler : public virtual CefBase {
+@@ -138,21 +148,22 @@ class CefLifeSpanHandler : public virtual CefBase {
    // 2.  Application's top-level window receives the close notification and:
    //     A. Calls CefBrowserHost::CloseBrowser(false).
    //     B. Cancels the window close.
@@ -62,10 +59,10 @@ index 1453496..86acba6 100644
    ///
    /*--cef()--*/
 diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
-index 1f890f6..3d6ca0a 100644
+index 0ee8366..c5540c8 100644
 --- a/libcef/browser/browser_host_impl.cc
 +++ b/libcef/browser/browser_host_impl.cc
-@@ -619,7 +619,12 @@ void CefBrowserHostImpl::CloseBrowser(bool force_close) {
+@@ -668,7 +668,12 @@ void CefBrowserHostImpl::CloseBrowser(bool force_close) {
      }
  
      content::WebContents* contents = web_contents();
@@ -79,7 +76,7 @@ index 1f890f6..3d6ca0a 100644
        // Will result in a call to BeforeUnloadFired() and, if the close isn't
        // canceled, CloseContents().
        contents->DispatchBeforeUnload(false);
-@@ -2038,6 +2043,24 @@ void CefBrowserHostImpl::LoadingStateChanged(content::WebContents* source,
+@@ -2097,6 +2102,24 @@ void CefBrowserHostImpl::LoadingStateChanged(content::WebContents* source,
    }
  }
  
@@ -105,18 +102,17 @@ index 1f890f6..3d6ca0a 100644
    if (destruction_state_ == DESTRUCTION_STATE_COMPLETED)
      return;
 diff --git a/libcef/browser/browser_host_impl.h b/libcef/browser/browser_host_impl.h
-index 630fda3..774be40 100644
+index ad5fe9e..14d7330 100644
 --- a/libcef/browser/browser_host_impl.h
 +++ b/libcef/browser/browser_host_impl.h
-@@ -577,6 +577,8 @@ class CefBrowserHostImpl : public CefBrowserHost,
+@@ -570,6 +570,7 @@ class CefBrowserHostImpl : public CefBrowserHost,
+   void OnLoadEnd(CefRefPtr<CefFrame> frame,
                   const GURL& url,
                   int http_status_code);
- 
 +  bool OnCloseBrowser(content::WebContents* source);
-+
+ 
    // Continuation from RunFileChooser.
    void RunFileChooserOnUIThread(const FileChooserParams& params,
-                                 const RunFileChooserCallback& callback);
 diff --git a/libcef/browser/browser_host_impl_linux.cc b/libcef/browser/browser_host_impl_linux.cc
 index 39670cf..291f798 100644
 --- a/libcef/browser/browser_host_impl_linux.cc
@@ -134,4 +130,3 @@ index 39670cf..291f798 100644
    CefWindowDelegateView* delegate_view =
        new CefWindowDelegateView(background_color);
    delegate_view->Init(window_info_.window,
-

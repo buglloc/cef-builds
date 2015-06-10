@@ -1,25 +1,25 @@
 diff --git a/include/internal/cef_types.h b/include/internal/cef_types.h
-index 20cf164..48205c9 100644
+index d5ee105..1ef872c 100644
 --- a/include/internal/cef_types.h
 +++ b/include/internal/cef_types.h
-@@ -1089,6 +1089,12 @@ typedef enum {
+@@ -1204,6 +1204,12 @@ typedef enum {
    // originated in the browser process.
    ///
    UR_FLAG_NO_RETRY_ON_5XX           = 1 << 7,
 +
 +  ///
 +  // If set 3xx responses will cause the fetch to halt immediately rather than
-+  // continue through the redirect. 
++  // continue through the redirect.
 +  ///
 +  UR_FLAG_STOP_ON_REDIRECT           = 1 << 8,
  } cef_urlrequest_flags_t;
  
  ///
 diff --git a/libcef/browser/browser_urlrequest_impl.cc b/libcef/browser/browser_urlrequest_impl.cc
-index 1005646..b7a8ed4 100644
+index e1de0b5..ca09537 100644
 --- a/libcef/browser/browser_urlrequest_impl.cc
 +++ b/libcef/browser/browser_urlrequest_impl.cc
-@@ -252,6 +252,9 @@ class CefBrowserURLRequest::Context
+@@ -292,6 +292,9 @@ class CefBrowserURLRequest::Context
      if (cef_flags & UR_FLAG_NO_RETRY_ON_5XX)
        fetcher_->SetAutomaticallyRetryOn5xx(false);
  
