@@ -1,7 +1,7 @@
 Cef Builds
 ==========
 
-Тут собраны патчи для [CEF](https://bitbucket.org/chromiumembedded/cef) (и их сборки), необходимые для работы [Brick](https://github.com/buglloc/brick).
+Тут собраны патчи для [CEF](https://bitbucket.org/chromiumembedded/cef) (и их сборки), необходимые для работы [Brick](https://github.com/buglloc/brick). Текущая версия - [3.2357.1280.geba024d](https://bitbucket.org/chromiumembedded/cef/commits/eba024daac2e2b873185d259508278aa973a3229)
 
 В [distrib](https://github.com/buglloc/cef-builds/tree/master/distrib) можно найти полные сборки CEF собранные со всеми нужными патчами.
 А в [libs](https://github.com/buglloc/cef-builds/tree/master/libs) только `CEF_BINARY_FILES` необходимые для работы Brick.
