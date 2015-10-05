@@ -1,8 +1,8 @@
 diff --git a/include/internal/cef_types.h b/include/internal/cef_types.h
-index d5ee105..1ef872c 100644
+index 2790f2c..3c44b30 100644
 --- a/include/internal/cef_types.h
 +++ b/include/internal/cef_types.h
-@@ -1204,6 +1204,12 @@ typedef enum {
+@@ -1167,6 +1167,12 @@ typedef enum {
    // originated in the browser process.
    ///
    UR_FLAG_NO_RETRY_ON_5XX           = 1 << 7,
@@ -16,7 +16,7 @@ index d5ee105..1ef872c 100644
  
  ///
 diff --git a/libcef/browser/browser_urlrequest_impl.cc b/libcef/browser/browser_urlrequest_impl.cc
-index e1de0b5..ca09537 100644
+index b727b46..1384e5c 100644
 --- a/libcef/browser/browser_urlrequest_impl.cc
 +++ b/libcef/browser/browser_urlrequest_impl.cc
 @@ -292,6 +292,9 @@ class CefBrowserURLRequest::Context

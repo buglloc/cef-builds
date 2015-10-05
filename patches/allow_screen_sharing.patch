@@ -1,8 +1,8 @@
 diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
-index 6e7b1c7..0ee8366 100644
+index b582a5d..79dcef7 100644
 --- a/libcef/browser/browser_host_impl.cc
 +++ b/libcef/browser/browser_host_impl.cc
-@@ -54,6 +54,7 @@
+@@ -56,6 +56,7 @@
  #include "content/public/browser/render_process_host.h"
  #include "content/public/browser/render_view_host.h"
  #include "content/public/browser/resource_request_info.h"
@@ -10,7 +10,7 @@ index 6e7b1c7..0ee8366 100644
  #include "content/public/common/file_chooser_params.h"
  #include "net/base/directory_lister.h"
  #include "third_party/WebKit/public/web/WebFindOptions.h"
-@@ -2415,7 +2416,10 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
+@@ -2610,7 +2611,10 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
        (request.audio_type == content::MEDIA_DEVICE_AUDIO_CAPTURE);
    bool webcam_requested =
        (request.video_type == content::MEDIA_DEVICE_VIDEO_CAPTURE);
@@ -22,7 +22,7 @@ index 6e7b1c7..0ee8366 100644
      switch (request.request_type) {
        case content::MEDIA_OPEN_DEVICE:
        case content::MEDIA_DEVICE_ACCESS:
-@@ -2434,6 +2438,21 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
+@@ -2629,6 +2633,21 @@ void CefBrowserHostImpl::RequestMediaAccessPermission(
              false,
              webcam_requested,
              &devices);

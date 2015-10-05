@@ -22,7 +22,7 @@ index 32fbef1..48eb448 100644
  
  #endif  // CEF_INCLUDE_CEF_RESPONSE_H_
 diff --git a/libcef/browser/browser_urlrequest_impl.cc b/libcef/browser/browser_urlrequest_impl.cc
-index 44bfdf8..e1de0b5 100644
+index b06390e..b727b46 100644
 --- a/libcef/browser/browser_urlrequest_impl.cc
 +++ b/libcef/browser/browser_urlrequest_impl.cc
 @@ -450,9 +450,12 @@ class CefBrowserURLRequest::Context

@@ -59,10 +59,10 @@ index 70bd70f..08b1d52 100644
    ///
    /*--cef()--*/
 diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
-index 0ee8366..c5540c8 100644
+index 79dcef7..dea6a7f 100644
 --- a/libcef/browser/browser_host_impl.cc
 +++ b/libcef/browser/browser_host_impl.cc
-@@ -668,7 +668,12 @@ void CefBrowserHostImpl::CloseBrowser(bool force_close) {
+@@ -743,7 +743,12 @@ void CefBrowserHostImpl::CloseBrowser(bool force_close) {
      }
  
      content::WebContents* contents = web_contents();
@@ -76,7 +76,7 @@ index 0ee8366..c5540c8 100644
        // Will result in a call to BeforeUnloadFired() and, if the close isn't
        // canceled, CloseContents().
        contents->DispatchBeforeUnload(false);
-@@ -2097,6 +2102,24 @@ void CefBrowserHostImpl::LoadingStateChanged(content::WebContents* source,
+@@ -2284,6 +2289,24 @@ void CefBrowserHostImpl::LoadingStateChanged(content::WebContents* source,
    }
  }
  
@@ -102,17 +102,17 @@ index 0ee8366..c5540c8 100644
    if (destruction_state_ == DESTRUCTION_STATE_COMPLETED)
      return;
 diff --git a/libcef/browser/browser_host_impl.h b/libcef/browser/browser_host_impl.h
-index ad5fe9e..14d7330 100644
+index e5cf09f..466ad31 100644
 --- a/libcef/browser/browser_host_impl.h
 +++ b/libcef/browser/browser_host_impl.h
-@@ -570,6 +570,7 @@ class CefBrowserHostImpl : public CefBrowserHost,
+@@ -595,6 +595,7 @@ class CefBrowserHostImpl : public CefBrowserHost,
    void OnLoadEnd(CefRefPtr<CefFrame> frame,
                   const GURL& url,
                   int http_status_code);
 +  bool OnCloseBrowser(content::WebContents* source);
+   void OnFullscreenModeChange(bool fullscreen);
  
    // Continuation from RunFileChooser.
-   void RunFileChooserOnUIThread(const FileChooserParams& params,
 diff --git a/libcef/browser/browser_host_impl_linux.cc b/libcef/browser/browser_host_impl_linux.cc
 index 39670cf..291f798 100644
 --- a/libcef/browser/browser_host_impl_linux.cc
