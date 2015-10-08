@@ -1,5 +1,5 @@
 #!/bin/sh
-PATCHES="allow_screen_sharing.patch extend_internal_window_events.patch extend_cef_response.patch stop_on_redirect.patch"
+PATCHES="allow_screen_sharing.patch extend_internal_window_events.patch extend_cef_response.patch stop_on_redirect.patch use_nss.patch"
 
 # in ../cef/chromium/src/cef must be current cef in right branch
 cd ../cef/chromium/src/cef
