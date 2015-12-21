@@ -1,0 +1,134 @@
+diff --git a/include/cef_browser.h b/include/cef_browser.h
+index b27709e..793c630 100644
+--- a/include/cef_browser.h
++++ b/include/cef_browser.h
+@@ -66,6 +66,19 @@ class CefBrowser : public virtual CefBase {
+   /*--cef()--*/
+   virtual CefRefPtr<CefBrowserHost> GetHost() =0;
+ 
++  //
++  // SpellCheck a word.
++  // Can be accessed only from browser thread from render process.
++  // Returns true if spelled correctly, false otherwise.
++  // In addition, finds the suggested words for a given word
++  // and puts them into |*suggestions|.
++  // If the word is spelled correctly, the vector is empty.
++  // If optional_suggestions is NULL, suggested words will not be looked up.
++  // Note that Doing suggest lookups can be slow.
++  ///
++  /*--cef()--*/
++  virtual bool SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions) =0;
++
+   ///
+   // Returns true if the browser can navigate backwards.
+   ///
+diff --git a/libcef/browser/browser_host_impl.cc b/libcef/browser/browser_host_impl.cc
+index 34e076b..07ef7c7 100644
+--- a/libcef/browser/browser_host_impl.cc
++++ b/libcef/browser/browser_host_impl.cc
+@@ -1388,6 +1388,11 @@ CefRefPtr<CefBrowserHost> CefBrowserHostImpl::GetHost() {
+   return this;
+ }
+ 
++bool CefBrowserHostImpl::SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions) {
++  NOTREACHED() << "SpellCheckWord can be called only from the render process.";
++  return true;
++}
++
+ bool CefBrowserHostImpl::CanGoBack() {
+   base::AutoLock lock_scope(state_lock_);
+   return can_go_back_;
+diff --git a/libcef/browser/browser_host_impl.h b/libcef/browser/browser_host_impl.h
+index 0f0c97b..8e65180 100644
+--- a/libcef/browser/browser_host_impl.h
++++ b/libcef/browser/browser_host_impl.h
+@@ -214,6 +214,7 @@ class CefBrowserHostImpl : public CefBrowserHost,
+ 
+   // CefBrowser methods.
+   CefRefPtr<CefBrowserHost> GetHost() override;
++  bool SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions) override;
+   bool CanGoBack() override;
+   void GoBack() override;
+   bool CanGoForward() override;
+diff --git a/libcef/renderer/browser_impl.cc b/libcef/renderer/browser_impl.cc
+index 99f9109..0054e9c 100644
+--- a/libcef/renderer/browser_impl.cc
++++ b/libcef/renderer/browser_impl.cc
+@@ -84,6 +84,12 @@ CefRefPtr<CefBrowserHost> CefBrowserImpl::GetHost() {
+   return NULL;
+ }
+ 
++bool CefBrowserImpl::SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions) {
++  CEF_REQUIRE_RT_RETURN(false);
++
++  return CefContentRendererClient::Get()->SpellCheckWord(word, suggestions);
++}
++
+ bool CefBrowserImpl::CanGoBack() {
+   CEF_REQUIRE_RT_RETURN(false);
+ 
+diff --git a/libcef/renderer/browser_impl.h b/libcef/renderer/browser_impl.h
+index cdd4cac..098a73f 100644
+--- a/libcef/renderer/browser_impl.h
++++ b/libcef/renderer/browser_impl.h
+@@ -50,6 +50,7 @@ class CefBrowserImpl : public CefBrowser,
+ 
+   // CefBrowser methods.
+   CefRefPtr<CefBrowserHost> GetHost() override;
++  bool SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions) override;
+   bool CanGoBack() override;
+   void GoBack() override;
+   bool CanGoForward() override;
+diff --git a/libcef/renderer/content_renderer_client.cc b/libcef/renderer/content_renderer_client.cc
+index f944ed4..3461893 100644
+--- a/libcef/renderer/content_renderer_client.cc
++++ b/libcef/renderer/content_renderer_client.cc
+@@ -309,6 +309,28 @@ CefRefPtr<CefBrowserImpl> CefContentRendererClient::GetBrowserForMainFrame(
+   return NULL;
+ }
+ 
++bool CefContentRendererClient::SpellCheckWord(const CefString& word,
++    std::vector<CefString>& suggestions) {
++
++  bool result = true;
++  if (spellcheck_.get()) {
++      int offset;
++      int length;
++      std::vector<base::string16> internal_suggestions;
++      const base::string16 &text = word.ToString16();
++      result = spellcheck_->SpellCheckWord(
++        text.c_str(), text.size(), 0,
++        &offset, &length, &internal_suggestions);
++
++      if (internal_suggestions.size()) {
++        for (const auto &suggestion: internal_suggestions)
++          suggestions.push_back(suggestion);
++      }
++  }
++
++  return result;
++}
++
+ void CefContentRendererClient::OnBrowserDestroyed(CefBrowserImpl* browser) {
+   BrowserMap::iterator it = browsers_.begin();
+   for (; it != browsers_.end(); ++it) {
+diff --git a/libcef/renderer/content_renderer_client.h b/libcef/renderer/content_renderer_client.h
+index 15b25d1..c09641c 100644
+--- a/libcef/renderer/content_renderer_client.h
++++ b/libcef/renderer/content_renderer_client.h
+@@ -53,6 +53,15 @@ class CefContentRendererClient : public content::ContentRendererClient,
+   // Returns the browser associated with the specified main WebFrame.
+   CefRefPtr<CefBrowserImpl> GetBrowserForMainFrame(blink::WebFrame* frame);
+ 
++  // SpellCheck a word.
++  // Returns true if spelled correctly, false otherwise.
++  // In addition, finds the suggested words for a given word
++  // and puts them into |*optional_suggestions|.
++  // If the word is spelled correctly, the vector is empty.
++  // If optional_suggestions is NULL, suggested words will not be looked up.
++  // Note that Doing suggest lookups can be slow.
++  bool SpellCheckWord(const CefString& word, std::vector<CefString>& suggestions);
++
+   // Called from CefBrowserImpl::OnDestruct().
+   void OnBrowserDestroyed(CefBrowserImpl* browser);
+ 
